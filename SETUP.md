@@ -10,6 +10,8 @@ After setup is complete, DO NOT wait for the cron schedule. Immediately run the 
 
 ### 1. Initialize Files
 
+Working Directory `~/.openclaw/workspace`
+
 ```bash
 mkdir -p ~/.openclaw/autodream
 mkdir -p memory/episodes
