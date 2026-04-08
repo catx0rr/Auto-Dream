@@ -53,6 +53,7 @@ delivery: { mode: "announce" }
 ### 4. Cleanup
 
 And finally cleanup the files on skills/auto-dream/:
+- [ ] .git
 - [ ] LICENSE
 - [ ] README.md
 - [ ] SETUP.md
