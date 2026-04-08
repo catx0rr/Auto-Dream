@@ -125,7 +125,7 @@ git clone https://github.com/catx0rr/Auto-Dream.git \
 
 ## Setup
 
-Tell the agent: **"Set up Auto-Dream. Read `~/.openclaw/workspace/skills/auto-dream/SETUP.md"**
+Tell the agent: **"Set up Auto-Dream. Read `~/.openclaw/workspace/skills/auto-dream/SETUP.md`"**
 
 The agent will:
 1. Create `~/.openclaw/autodream/autodream.json` with default mode settings

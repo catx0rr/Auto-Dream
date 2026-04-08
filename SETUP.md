@@ -45,7 +45,7 @@ delivery: { mode: "announce" }
 
 - [ ] Cron job created and enabled
 - [ ] `~/.openclaw/autodream/autodream.json` exists with valid modes
-- [ ] `LTMEMORY.md` exists with section headers
+- [ ] `LTMEMORY.md` exists with section headers (use # LTMEMORY.md - Long-Horizon Meaning and History)
 - [ ] `memory/index.json` exists
 - [ ] `memory/procedures.md` exists
 - [ ] `memory/.dream-log.md` exists
