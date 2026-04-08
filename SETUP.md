@@ -49,3 +49,10 @@ delivery: { mode: "announce" }
 - [ ] `memory/index.json` exists
 - [ ] `memory/procedures.md` exists
 - [ ] `memory/.dream-log.md` exists
+
+### 4. Cleanup
+
+And finally cleanup the files on skills/auto-dream/:
+- [ ] LICENSE
+- [ ] README.md
+- [ ] SETUP.md
