@@ -3,7 +3,7 @@
 Cognitive memory architecture for OpenClaw agents. Multi-mode dream cycles consolidate daily logs into structured long-term memory with quality gates, importance scoring, forgetting curves, knowledge graphs, and health monitoring.
 
 ---
-## This repository is a fork of [MyClaw.ai - openclaw-auto-dream](https://github.com/LeoYeAI/openclaw-auto-dream)
+This repository is a fork of [MyClaw.ai - openclaw-auto-dream](https://github.com/LeoYeAI/openclaw-auto-dream)
 
 ---
 
@@ -18,13 +18,13 @@ Auto-Dream runs periodic "dream cycles" that scan, extract, score, gate, and con
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
 │                                                                      │
-│   ┌──────────┐   ┌───────────┐   ┌─────────────┐   ┌────────────┐  │
-│   │  COLLECT  │──▶│   SCORE   │──▶│ CONSOLIDATE │──▶│  EVALUATE  │  │
-│   │          │   │ + GATE    │   │             │   │            │  │
-│   │ Scan logs│   │ Importance│   │ Route layers│   │ Health     │  │
-│   │ Extract  │   │ Recall cnt│   │ Semantic    │   │ Forgetting │  │
-│   │ insights │   │ Unique cnt│   │ dedup + IDs │   │ Insights   │  │
-│   └──────────┘   └───────────┘   └─────────────┘   └────────────┘  │
+│   ┌──────────┐   ┌───────────┐   ┌─────────────┐   ┌────────────┐    │
+│   │  COLLECT │──▶│   SCORE   │──▶│ CONSOLIDATE │──▶│  EVALUATE  │    │
+│   │          │   │ + GATE    │   │             │   │            │    │
+│   │ Scan logs│   │ Importance│   │ Route layers│   │ Health     │    │
+│   │ Extract  │   │ Recall cnt│   │ Semantic    │   │ Forgetting │    │
+│   │ insights │   │ Unique cnt│   │ dedup + IDs │   │ Insights   │    │
+│   └──────────┘   └───────────┘   └─────────────┘   └────────────┘    │
 │                                                                      │
 │              ☽ Dream Cycle — Mode Dispatch (rem/deep/core) ☾         │
 └──────────────────────────────────────────────────────────────────────┘
@@ -32,8 +32,8 @@ Auto-Dream runs periodic "dream cycles" that scan, extract, score, gate, and con
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
      ┌──────────────┐ ┌─────────────┐ ┌──────────────┐
-     │  📊 Dashboard │ │ 🔔 Notify   │ │ 📝 Dream Log │
-     │  HTML + Charts│ │ Push to chat│ │ Append report│
+     │ 📊 Dashboard │ │ 🔔 Notify   │ │ 📝 Dream Log │
+     │HTML + Charts │ │ Push to chat│ │ Append report│
      └──────────────┘ └─────────────┘ └──────────────┘
 ```
 
@@ -119,7 +119,7 @@ Portable JSON bundle export/import with conflict resolution and pre-import backu
 ## Install
 
 ```bash
-git clone https://github.com/catx0rr/openclaw-auto-dream \
+git clone https://github.com/catx0rr/Auto-Dream.git \
   ~/.openclaw/workspace/skills/auto-dream
 ```
 
@@ -163,8 +163,8 @@ The agent will:
 No external dependencies. No API keys. No databases. Just files and intelligence.
 
 ## CREDITS
-> This is a fork of [myclaw.ai - openclaw-auto-dream](https://github.com/LeoYeAI/openclaw-auto-dream)
-> **Fork note:** This version redirects Auto-Dream's long-term layer from `MEMORY.md` to `LTMEMORY.md`.
+> **Fork note:** This is a fork of [*myclaw.ai - openclaw-auto-dream*](https://github.com/LeoYeAI/openclaw-auto-dream)
+> This version redirects Auto-Dream's long-term layer from `MEMORY.md` to `LTMEMORY.md`.
 > `MEMORY.md` remains owned by OpenClaw's native `memory-core` and dreaming system.
 > Both systems read from the same daily logs but write to separate files — zero overlap.
 
