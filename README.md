@@ -1,4 +1,4 @@
-# OpenClaw Auto-Dream v2.0.0
+# OpenClaw Auto-Dream v4.1.0
 
 Cognitive memory architecture for OpenClaw agents. Multi-mode dream cycles consolidate daily logs into structured long-term memory with quality gates, importance scoring, forgetting curves, knowledge graphs, and health monitoring.
 
@@ -39,14 +39,16 @@ Auto-Dream runs periodic "dream cycles" that scan, extract, score, gate, and con
 
 ### Dream Modes
 
-Four modes control consolidation frequency and quality gates:
+Four modes control consolidation frequency and quality gates. Two setup profiles generate different threshold presets — see `profiles/` for details.
+
+Default thresholds shown below are for the **personal-assistant** profile:
 
 | Mode | Cadence | minScore | minRecallCount | minUnique | Purpose |
 |------|---------|----------|----------------|-----------|---------|
 | `off` | Disabled | — | — | — | No dreaming |
-| `core` | Daily 3 AM | 0.75 | 3 | 2 | Daily sweep |
-| `rem` | Every 6 hours | 0.85 | 4 | 3 | Fast-track high-signal |
-| `deep` | Every 12 hours | 0.80 | 3 | 3 | Mid-frequency warm entries |
+| `core` | Daily 3 AM | 0.72 | 2 | 1 | Daily sweep |
+| `rem` | Every 6 hours | 0.85 | 2 | 2 | Fast-track high-signal |
+| `deep` | Every 12 hours | 0.80 | 2 | 2 | Mid-frequency warm entries |
 
 A single cron fires 4 times daily (4:30, 10:30, 16:30, 22:30) and dispatches whichever modes are due based on elapsed time. `rem` catches hot items fast, `deep` catches warm items, `core` sweeps everything else daily. Entries that fail all gates remain in daily logs for re-evaluation.
 
@@ -55,7 +57,11 @@ A single cron fires 4 times daily (4:30, 10:30, 16:30, 22:30) and dispatches whi
 An entry must pass **all three gates** for its mode:
 - **minScore** — computed importance (`base_weight × recency × reference_boost / 8.0`)
 - **minRecallCount** — total times referenced across any context
-- **minUnique** — distinct sessions that referenced it (prevents single-conversation inflation)
+- **minUnique** — uniqueness count, evaluated according to `uniqueMode` (default: `day_or_session` — prefers day count when available, falls back to session count)
+
+Additional gate features:
+- **PERMANENT bypass** — entries marked `⚠️ PERMANENT` always bypass all gates
+- **Fast-path bypass** — entries with specific markers (e.g. `HIGH`, `PIN`, `PREFERENCE`, `ROUTINE`, `PROCEDURE`) can bypass regular gates if they meet the softer `fastPathMinScore` and `fastPathMinRecallCount` thresholds. Active markers vary by profile.
 
 ### Five Memory Layers
 
@@ -128,10 +134,13 @@ git clone https://github.com/catx0rr/Auto-Dream.git \
 Tell the agent: **"Set up Auto-Dream. Read `~/.openclaw/workspace/skills/auto-dream/SETUP.md`"**
 
 The agent will:
-1. Create `~/.openclaw/autodream/autodream.json` with default mode settings
-2. Create a single cron job (4x daily, mode dispatch inside the prompt)
-3. Ask your preferred notification level
-4. Run the first dream cycle (bypasses quality gates to bootstrap memory)
+1. Ask which profile to use (`personal-assistant` or `business-employee`) — or read `AUTODREAM_PROFILE` env var for non-interactive setup
+2. Create `~/.openclaw/autodream/autodream.json` with profile-specific mode settings
+3. Create a single cron job (4x daily, mode dispatch inside the prompt)
+4. Ask your preferred notification level
+5. Run the first dream cycle (bypasses quality gates to bootstrap memory)
+
+Home-automation assistants use the `personal-assistant` profile by default.
 
 ### Manual Triggers
 

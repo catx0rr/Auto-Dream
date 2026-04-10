@@ -26,7 +26,7 @@ def load_index(path: str) -> dict:
     p = Path(path)
     if not p.exists():
         return {
-            'version': '3.1',
+            'version': '4.1',
             'lastDream': None,
             'entries': [],
             'stats': {
@@ -67,6 +67,13 @@ def get_next_id(index: dict) -> str:
     return f'mem_{max_num + 1:03d}'
 
 
+def _extract_day_from_source(source: str) -> str:
+    """Extract YYYY-MM-DD from a source path like memory/2026-04-10.md."""
+    import re
+    match = re.search(r'(\d{4}-\d{2}-\d{2})', source)
+    return match.group(1) if match else ''
+
+
 def add_entry(index: dict, entry: dict) -> dict:
     """Add a new entry to the index."""
     now = datetime.now(tz=timezone.utc).isoformat()
@@ -83,6 +90,12 @@ def add_entry(index: dict, entry: dict) -> dict:
         entry['uniqueSessionCount'] = 1
     if 'sessionSources' not in entry:
         entry['sessionSources'] = [entry.get('source', '')]
+    if 'uniqueDayCount' not in entry:
+        # Derive day from source path if possible (e.g. memory/2026-04-10.md)
+        source = entry.get('source', '')
+        day = _extract_day_from_source(source)
+        entry['uniqueDayCount'] = 1 if day else 0
+        entry['uniqueDaySources'] = [day] if day else []
     if 'importance' not in entry:
         entry['importance'] = 0.5
     if 'tags' not in entry:
@@ -97,7 +110,7 @@ def add_entry(index: dict, entry: dict) -> dict:
 
 
 def update_session(index: dict, entry_id: str, source_log: str) -> dict:
-    """Update referenceCount and uniqueSessionCount for an entry."""
+    """Update referenceCount, uniqueSessionCount, and uniqueDayCount for an entry."""
     for entry in index['entries']:
         if entry.get('id') != entry_id:
             continue
@@ -114,10 +127,22 @@ def update_session(index: dict, entry_id: str, source_log: str) -> dict:
                 sources = sources[-30:]
             entry['sessionSources'] = sources
 
+        # Track unique days
+        day = _extract_day_from_source(source_log)
+        if day:
+            day_sources = entry.get('uniqueDaySources', [])
+            if day not in day_sources:
+                entry['uniqueDayCount'] = entry.get('uniqueDayCount', 0) + 1
+                day_sources.append(day)
+                if len(day_sources) > 30:
+                    day_sources = day_sources[-30:]
+                entry['uniqueDaySources'] = day_sources
+
         return {
             'id': entry_id,
             'referenceCount': entry['referenceCount'],
             'uniqueSessionCount': entry['uniqueSessionCount'],
+            'uniqueDayCount': entry.get('uniqueDayCount', 0),
             'lastReferenced': entry['lastReferenced'],
         }
 

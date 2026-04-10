@@ -1,4 +1,4 @@
-# Scoring, Quality Gates & Forgetting — Memory Evaluation Algorithms (v4.0)
+# Scoring, Quality Gates & Forgetting — Memory Evaluation Algorithms (v4.1)
 
 ## Importance Score
 
@@ -89,17 +89,41 @@ Quality gates determine whether an extracted entry qualifies for consolidation i
 |-----------|-------------------|------------------|
 | `minScore` | `importance` | Computed importance score (0.0–1.0) |
 | `minRecallCount` | `referenceCount` | Total times this entry has been referenced |
-| `minUnique` | `uniqueSessionCount` | Distinct sessions that have referenced this entry |
+| `minUnique` | depends on `uniqueMode` | Uniqueness count — evaluated according to `uniqueMode` config |
+
+#### uniqueMode
+
+Controls how `minUnique` is resolved:
+
+| uniqueMode | Field used | Behavior |
+|------------|-----------|----------|
+| `day_or_session` (default) | `uniqueDayCount` if > 0, else `uniqueSessionCount` | Prefer day-based reinforcement, fall back to session count |
+| `day` | `uniqueDayCount` | Day count only |
+| `session` | `uniqueSessionCount` | Session count only (legacy behavior) |
+| `channel` | `uniqueChannelCount` | Channel count only |
+| `max` | highest of day/session/channel | Use the maximum available signal |
 
 ### Mode Thresholds
 
-Defined in `~/.openclaw/autodream/autodream.json`:
+Defined in `~/.openclaw/autodream/autodream.json`. Thresholds vary by profile.
+
+**Personal-assistant defaults:**
 
 | Mode | minScore | minRecallCount | minUnique |
 |------|----------|----------------|-----------|
-| `core` | 0.75 | 3 | 2 |
-| `rem` | 0.85 | 4 | 3 |
-| `deep` | 0.80 | 3 | 3 |
+| `core` | 0.72 | 2 | 1 |
+| `rem` | 0.85 | 2 | 2 |
+| `deep` | 0.80 | 2 | 2 |
+
+**Business-employee defaults:**
+
+| Mode | minScore | minRecallCount | minUnique |
+|------|----------|----------------|-----------|
+| `core` | 0.72 | 2 | 1 |
+| `rem` | 0.85 | 3 | 2 |
+| `deep` | 0.80 | 2 | 2 |
+
+See `profiles/` for full presets including fast-path thresholds and markers.
 
 ### Gate Evaluation Order
 
@@ -119,46 +143,96 @@ def apply_gates(candidates, due_modes, conf):
             if entry in qualified:
                 continue  # already promoted by stricter mode
 
-            # PERMANENT always passes
+            # Hard bypass: PERMANENT always passes
             if "⚠️ PERMANENT" in entry.markers:
                 qualified.append((entry, mode))
                 continue
 
+            # Soft bypass: fast-path
+            if passes_fast_path(entry, gate):
+                qualified.append((entry, mode))
+                continue
+
+            # Resolve effective uniqueness via uniqueMode
+            effective_unique = get_effective_unique(entry, gate.uniqueMode)
+
+            # Regular AND gate
             if (entry.importance >= gate.minScore
                 and entry.referenceCount >= gate.minRecallCount
-                and entry.uniqueSessionCount >= gate.minUnique):
+                and effective_unique >= gate.minUnique):
                 qualified.append((entry, mode))
 
     deferred = [e for e in candidates if e not in [q[0] for q in qualified]]
     return qualified, deferred
+
+
+def passes_fast_path(entry, gate):
+    """Softer bypass for high-salience entries."""
+    marker = entry.marker
+    # Score + recall fast-path
+    if (gate.fastPathMinScore is not None
+        and entry.importance >= gate.fastPathMinScore
+        and entry.referenceCount >= gate.fastPathMinRecallCount):
+        return True
+    # Marker fast-path
+    if marker and marker in gate.fastPathMarkers:
+        return True
+    return False
+
+
+def get_effective_unique(entry, unique_mode):
+    """Resolve uniqueness count based on configured mode."""
+    if unique_mode == "day_or_session":
+        return entry.uniqueDayCount if entry.uniqueDayCount > 0 else entry.uniqueSessionCount
+    elif unique_mode == "day":
+        return entry.uniqueDayCount
+    elif unique_mode == "session":
+        return entry.uniqueSessionCount
+    elif unique_mode == "channel":
+        return entry.uniqueChannelCount
+    elif unique_mode == "max":
+        return max(entry.uniqueDayCount, entry.uniqueSessionCount, entry.uniqueChannelCount)
+    return entry.uniqueSessionCount  # fallback
 ```
 
 ### Gate Bypass Rules
 
 | Condition | Bypass? | Rationale |
 |-----------|---------|-----------|
-| `⚠️ PERMANENT` marker | Yes | User-protected entries always consolidate |
-| `🔥 HIGH` marker | No | HIGH doubles base_weight but still must pass gates |
-| `📌 PIN` marker | No | PIN prevents archival but does not bypass intake gates |
+| `⚠️ PERMANENT` marker | Yes (hard) | User-protected entries always consolidate |
+| Fast-path (marker match or score+recall) | Yes (soft) | High-salience entries that meet `fastPathMinScore`/`fastPathMinRecallCount` or have a marker in `fastPathMarkers` |
+| `🔥 HIGH` marker | No (unless in `fastPathMarkers`) | HIGH doubles base_weight but must pass gates unless fast-path configured |
+| `📌 PIN` marker | No (unless in `fastPathMarkers`) | PIN prevents archival but does not bypass intake gates unless fast-path configured |
 | First Dream (post-install) | Yes | Bootstrap run consolidates everything to seed memory |
 | Manual trigger ("Dream now") | Configurable | Can run with or without gates per user preference |
 
 ---
 
-## Unique Session Count — Tracking `uniqueSessionCount`
+## Uniqueness Tracking — `uniqueSessionCount` and `uniqueDayCount`
 
 ### Purpose
 
-`referenceCount` tracks total references but can be inflated by a single long conversation mentioning the same topic repeatedly. `uniqueSessionCount` ensures an entry has been referenced across **distinct sessions**, providing a cross-session relevance signal.
+`referenceCount` tracks total references but can be inflated by a single long conversation mentioning the same topic repeatedly. Uniqueness tracking ensures an entry has been referenced across **distinct sessions or days**, providing a cross-context relevance signal.
+
+### Two uniqueness signals
+
+| Field | What it tracks | How it increments |
+|-------|---------------|-------------------|
+| `uniqueSessionCount` | Distinct source log files that referenced this entry | New source log not in `sessionSources` |
+| `uniqueDayCount` | Distinct calendar days that referenced this entry | New day (YYYY-MM-DD) not in `uniqueDaySources` |
+
+The `uniqueMode` config determines which signal is used by the gate. Default is `day_or_session`: prefer `uniqueDayCount` when available, fall back to `uniqueSessionCount`.
 
 ### Definition
 
 A "session" is identified by the daily log filename (`memory/YYYY-MM-DD.md`). Each daily log represents one session boundary.
 
+A "day" is the YYYY-MM-DD date extracted from the source log path.
+
 ### Tracking Algorithm
 
 ```python
-def update_session_tracking(entry, source_log_filename, index):
+def update_tracking(entry, source_log_filename, index):
     """Called during the Collect phase for each extracted entry."""
 
     if entry.id not in index.entries:
@@ -166,6 +240,9 @@ def update_session_tracking(entry, source_log_filename, index):
         entry.referenceCount = 1
         entry.uniqueSessionCount = 1
         entry.sessionSources = [source_log_filename]
+        day = extract_day(source_log_filename)  # e.g. "2026-04-10"
+        entry.uniqueDayCount = 1 if day else 0
+        entry.uniqueDaySources = [day] if day else []
         return
 
     existing = index.entries[entry.id]
@@ -178,12 +255,18 @@ def update_session_tracking(entry, source_log_filename, index):
         existing.uniqueSessionCount += 1
         existing.sessionSources.append(source_log_filename)
 
+    # Only increment uniqueDayCount if this is a new day
+    day = extract_day(source_log_filename)
+    if day and day not in existing.uniqueDaySources:
+        existing.uniqueDayCount += 1
+        existing.uniqueDaySources.append(day)
+
     existing.lastReferenced = today
 ```
 
-### Index Entry Schema (v3.1)
+### Index Entry Schema (v4.1)
 
-The `sessionSources` field is stored in `index.json` but kept compact — only the last 30 session filenames are retained (older ones are trimmed from the front since `uniqueSessionCount` already captured the count).
+The `sessionSources` and `uniqueDaySources` fields are stored in `index.json` but kept compact — only the last 30 entries are retained (older ones are trimmed from the front since the counts already captured the history).
 
 ```json
 {
@@ -196,6 +279,8 @@ The `sessionSources` field is stored in `index.json` but kept compact — only t
   "referenceCount": 7,
   "uniqueSessionCount": 4,
   "sessionSources": ["memory/2026-04-01.md", "memory/2026-04-02.md", "memory/2026-04-04.md", "memory/2026-04-05.md"],
+  "uniqueDayCount": 4,
+  "uniqueDaySources": ["2026-04-01", "2026-04-02", "2026-04-04", "2026-04-05"],
   "importance": 0.82,
   "tags": ["project", "architecture"],
   "related": ["mem_002", "mem_005"],

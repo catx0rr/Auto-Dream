@@ -66,7 +66,7 @@ From each file, extract items in these categories:
 
 **Skip**: routine greetings, small talk, transient debug output, information that already exists unchanged in LTMEMORY.md.
 
-Track the source daily log filename for each extracted entry (serves as session ID for `uniqueSessionCount` tracking).
+Track the source daily log filename for each extracted entry (serves as session ID for `uniqueSessionCount` and day source for `uniqueDayCount` tracking).
 
 ---
 
@@ -83,13 +83,14 @@ ref_boost = max(1.0, log2(referenceCount + 1))
 importance = clamp((base_weight × recency × ref_boost) / 8.0, 0.0, 1.0)
 ```
 
-### 1.5.2 Look up session tracking
+### 1.5.2 Look up session and day tracking
 
 For each entry, check `memory/index.json`:
-- If entry exists in index: read `referenceCount`, `uniqueSessionCount`, `sessionSources`
+- If entry exists in index: read `referenceCount`, `uniqueSessionCount`, `uniqueDayCount`, `sessionSources`, `uniqueDaySources`
   - Increment `referenceCount`
   - If current source log is NOT in `sessionSources`: increment `uniqueSessionCount`, append source log
-- If entry is new: initialize `referenceCount = 1`, `uniqueSessionCount = 1`, `sessionSources = [current_log]`
+  - Extract day (YYYY-MM-DD) from source log path. If day is NOT in `uniqueDaySources`: increment `uniqueDayCount`, append day
+- If entry is new: initialize `referenceCount = 1`, `uniqueSessionCount = 1`, `sessionSources = [current_log]`, derive day from source, set `uniqueDayCount = 1`, `uniqueDaySources = [day]`
 
 ### 1.5.3 Apply quality gates
 
@@ -103,11 +104,25 @@ FOR each mode in DUE_MODES (strictest first):
   gate = conf.modes[mode]
   FOR each candidate NOT already in QUALIFIED:
     IF "⚠️ PERMANENT" in entry.markers:
-      → add to QUALIFIED with promotedBy = mode (bypass gates)
-    ELIF entry.importance >= gate.minScore
+      → add to QUALIFIED with promotedBy = mode (hard bypass)
+
+    ELIF fast-path passes:
+      (marker in gate.fastPathMarkers OR
+       importance >= gate.fastPathMinScore AND referenceCount >= gate.fastPathMinRecallCount)
+      → add to QUALIFIED with promotedBy = mode (fast-path bypass)
+
+    ELSE:
+      Resolve effective_unique via gate.uniqueMode:
+        day_or_session → prefer uniqueDayCount if > 0, else uniqueSessionCount
+        day            → uniqueDayCount
+        session        → uniqueSessionCount
+        channel        → uniqueChannelCount
+        max            → highest of all three
+
+      IF entry.importance >= gate.minScore
          AND entry.referenceCount >= gate.minRecallCount
-         AND entry.uniqueSessionCount >= gate.minUnique:
-      → add to QUALIFIED with promotedBy = mode
+         AND effective_unique >= gate.minUnique:
+        → add to QUALIFIED with promotedBy = mode
 
 Remaining candidates → DEFERRED
 ```
@@ -198,6 +213,8 @@ For each memory entry (in LTMEMORY.md, procedures.md, and episodes), ensure an e
   "referenceCount": 7,
   "uniqueSessionCount": 4,
   "sessionSources": ["memory/2026-04-01.md", "memory/2026-04-03.md", "memory/2026-04-04.md", "memory/2026-04-05.md"],
+  "uniqueDayCount": 4,
+  "uniqueDaySources": ["2026-04-01", "2026-04-03", "2026-04-04", "2026-04-05"],
   "promotedBy": "rem",
   "importance": 0.82,
   "tags": ["tag1", "tag2"],

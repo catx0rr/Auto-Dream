@@ -15,7 +15,7 @@ Agent periodically "dreams" — scans daily logs, extracts key knowledge, applie
 | `LTMEMORY.md` | Structured long-term knowledge (Auto-Dream layer) | Append, update, archive |
 | `memory/procedures.md` | Workflow preferences, tool usage | Append, update |
 | `memory/episodes/*.md` | Project narratives | Append only |
-| `memory/index.json` | Runtime entry metadata (v3.1 schema) | Rebuilt each dream |
+| `memory/index.json` | Runtime entry metadata (v4.1 schema) | Rebuilt each dream |
 | `memory/.dream-log.md` | Dream report log | Append only |
 | `memory/.archive.md` | Low-importance compressed archive | Append only |
 
@@ -24,22 +24,55 @@ Optional: LCM plugin (Working Memory layer). If not installed, prompt the user:
 
 Do not auto-install plugins or modify config.
 
+## Runtime Profile
+
+Auto-Dream reads thresholds from `~/.openclaw/autodream/autodream.json`.
+Profile selection is setup-time only and is persisted in the `"profile"` field.
+The gate logic reads config generically.
+
 ## Dream Modes
 
 Four modes control consolidation frequency and quality gates. An entry must pass **all three gates** for its mode before it is promoted to long-term memory.
 
+Default thresholds vary by profile. The values below are the **personal-assistant** defaults. See `profiles/business-employee.md` for business defaults.
+
 | Mode | Cadence | minScore | minRecallCount | minUnique | Purpose |
 |------|---------|----------|----------------|-----------|---------|
 | `off` | Disabled | — | — | — | No dreaming |
-| `core` | Daily 3 AM | 0.75 | 3 | 2 | Daily sweep — catches everything reasonably important |
-| `rem` | Every 6 hours | 0.85 | 4 | 3 | High-frequency — fast-tracks clearly high-signal entries |
-| `deep` | Every 12 hours | 0.80 | 3 | 3 | Mid-frequency — catches warm entries with cross-session breadth |
+| `core` | Daily 3 AM | 0.72 | 2 | 1 | Daily sweep — catches everything reasonably important |
+| `rem` | Every 6 hours | 0.85 | 2 | 2 | High-frequency — fast-tracks clearly high-signal entries |
+| `deep` | Every 12 hours | 0.80 | 2 | 2 | Mid-frequency — catches warm entries with cross-day breadth |
 
 ### Gate Definitions
 
 - **minScore** — minimum `importance` score (0.0–1.0) computed from `base_weight × recency × reference_boost / 8.0`. See `references/scoring.md`.
 - **minRecallCount** — minimum `referenceCount` in `index.json`. How many times this entry has been referenced across any context.
-- **minUnique** — minimum `uniqueSessionCount` in `index.json`. How many **distinct sessions** have referenced this entry. Prevents single-conversation repetition from inflating recall count.
+- **minUnique** — minimum uniqueness count. The meaning of "unique" depends on `uniqueMode`.
+
+### uniqueMode
+
+Controls how `minUnique` is evaluated:
+
+| uniqueMode | Behavior |
+|------------|----------|
+| `day_or_session` | **(default)** Prefer `uniqueDayCount` when available, fall back to `uniqueSessionCount` |
+| `day` | Use `uniqueDayCount` only |
+| `session` | Use `uniqueSessionCount` only (legacy behavior) |
+| `channel` | Use `uniqueChannelCount` only |
+| `max` | Use the highest of day, session, and channel counts |
+
+`day_or_session` is the default for both profiles. It allows day-based reinforcement — if the same truth is referenced on different days, it counts even if the sessions overlap. This is important for narrow-topology agents (personal assistants, home-automation) where the owner is the primary interaction source.
+
+### Fast-path markers
+
+Entries with specific markers can bypass the regular AND gate through a softer fast-path check. The fast-path requires either:
+
+- **Score + recall pass:** `importance >= fastPathMinScore AND referenceCount >= fastPathMinRecallCount`
+- **Marker match:** entry marker is in `fastPathMarkers` list
+
+`PERMANENT` still bypasses all gates unconditionally. Fast-path is a softer bypass for high-salience entries that don't quite meet the regular gate thresholds.
+
+Available markers: `HIGH`, `PIN`, `PREFERENCE`, `ROUTINE`, `PROCEDURE`. Which markers are active depends on the profile preset written during setup.
 
 ### Mode Dispatch (Single Cron)
 
@@ -67,7 +100,8 @@ Location: `~/.openclaw/autodream/autodream.json`
 
 ```json
 {
-  "version": "4.0",
+  "version": "4.1",
+  "profile": "personal-assistant",
   "activeModes": ["core", "rem", "deep"],
   "notificationLevel": "summary",
   "instanceName": "default",
@@ -77,23 +111,35 @@ Location: `~/.openclaw/autodream/autodream.json`
     "core": {
       "enabled": true,
       "cadence": "0 3 * * *",
-      "minScore": 0.75,
-      "minRecallCount": 3,
-      "minUnique": 2
+      "minScore": 0.72,
+      "minRecallCount": 2,
+      "minUnique": 1,
+      "uniqueMode": "day_or_session",
+      "fastPathMinScore": 0.90,
+      "fastPathMinRecallCount": 2,
+      "fastPathMarkers": ["HIGH", "PIN", "PREFERENCE", "ROUTINE"]
     },
     "rem": {
       "enabled": true,
       "cadence": "30 4,10,16,22 * * *",
       "minScore": 0.85,
-      "minRecallCount": 4,
-      "minUnique": 3
+      "minRecallCount": 2,
+      "minUnique": 2,
+      "uniqueMode": "day_or_session",
+      "fastPathMinScore": 0.88,
+      "fastPathMinRecallCount": 2,
+      "fastPathMarkers": ["HIGH", "PIN", "PREFERENCE", "ROUTINE", "PROCEDURE"]
     },
     "deep": {
       "enabled": true,
       "cadence": "0 */12 * * *",
       "minScore": 0.80,
-      "minRecallCount": 3,
-      "minUnique": 3
+      "minRecallCount": 2,
+      "minUnique": 2,
+      "uniqueMode": "day_or_session",
+      "fastPathMinScore": 0.86,
+      "fastPathMinRecallCount": 2,
+      "fastPathMarkers": ["HIGH", "PIN", "PREFERENCE", "ROUTINE"]
     }
   },
   "lastRun": {
@@ -109,11 +155,16 @@ Field reference:
 | Field | Type | Description |
 |-------|------|-------------|
 | `version` | string | Config schema version |
+| `profile` | string | Selected setup profile (`"personal-assistant"` or `"business-employee"`) |
 | `activeModes` | string[] | Which modes are enabled for the cron dispatch |
 | `notificationLevel` | string | `"silent"`, `"summary"`, or `"full"` |
 | `instanceName` | string | Human-readable instance identifier |
 | `timezone` | string | IANA timezone for cron scheduling |
 | `modes` | object | Per-mode gate thresholds (user-tunable) |
+| `modes.{name}.uniqueMode` | string | How `minUnique` is evaluated: `"day_or_session"` (default), `"day"`, `"session"`, `"channel"`, `"max"` |
+| `modes.{name}.fastPathMinScore` | number | Minimum importance for fast-path bypass |
+| `modes.{name}.fastPathMinRecallCount` | number | Minimum recall count for fast-path bypass |
+| `modes.{name}.fastPathMarkers` | string[] | Markers that trigger fast-path evaluation |
 | `lastRun` | object | ISO timestamps of last completed run per mode |
 
 ### Changing Modes
@@ -132,7 +183,7 @@ Always confirm changes with user before writing to conf.
 ## Preconditions
 
 This skill assumes:
-- `~/.openclaw/autodream/autodream.json` exists
+- `~/.openclaw/autodream/autodream.json` exists with a selected profile
 - required memory files are initialized
 - the recurring isolated cron job is already installed
 
@@ -155,15 +206,29 @@ Count LTMEMORY.md lines, decisions, lessons, open threads, total entries.
 Read unconsolidated daily logs. Extract decisions, facts, progress, lessons, and todos.
 
 ### Step 1.5: Score + Quality Gate
-For each extracted entry, compute preliminary importance score. Look up `referenceCount` and `uniqueSessionCount` from `memory/index.json` (for existing entries) or initialize to current values (for new entries). Apply the gates for each due mode:
+For each extracted entry, compute preliminary importance score. Look up `referenceCount`, `uniqueSessionCount`, and `uniqueDayCount` from `memory/index.json` (for existing entries) or initialize to current values (for new entries). Apply the gates for each due mode:
 
 ```
 FOR each due mode (rem first, then deep, then core):
   FOR each candidate entry not yet promoted this cycle:
-    IF entry.importance >= mode.minScore
-       AND entry.referenceCount >= mode.minRecallCount
-       AND entry.uniqueSessionCount >= mode.minUnique:
-      → MARK entry as QUALIFIED (record which mode promoted it)
+    IF entry.marker == PERMANENT:
+      → MARK entry as QUALIFIED (hard bypass)
+
+    ELSE IF fast-path passes (marker match OR score+recall meet fastPath thresholds):
+      → MARK entry as QUALIFIED (fast-path bypass)
+
+    ELSE:
+      resolve effective_unique using uniqueMode:
+        day_or_session → prefer uniqueDayCount, fall back to uniqueSessionCount
+        day            → use uniqueDayCount
+        session        → use uniqueSessionCount
+        channel        → use uniqueChannelCount
+        max            → use highest of all three
+
+      IF entry.importance >= mode.minScore
+         AND entry.referenceCount >= mode.minRecallCount
+         AND effective_unique >= mode.minUnique:
+        → MARK entry as QUALIFIED (regular gate pass)
 ```
 
 Entries qualified by a stricter mode (rem) are not re-evaluated by a looser mode (core).

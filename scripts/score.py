@@ -157,6 +157,7 @@ def score_index(index_path: str, check_archival_flag: bool = False) -> dict:
             'days_since_ref': days,
             'ref_count': ref_count,
             'unique_sessions': entry.get('uniqueSessionCount', 1),
+            'uniqueDayCount': entry.get('uniqueDayCount', 0),
             'marker': marker,
         }
 

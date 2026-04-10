@@ -81,7 +81,7 @@ Read all unconsolidated daily logs (from Step 0-A file list). Extract:
 
 Skip small talk and content already in LTMEMORY.md that hasn't changed.
 
-Track the source daily log filename for each entry (serves as session ID).
+Track the source daily log filename for each entry (serves as session ID and day source).
 
 **Output:** Write extracted entries to `/tmp/autodream-candidates.json` as a JSON array:
 
@@ -93,13 +93,14 @@ Track the source daily log filename for each entry (serves as session ID).
     "category": "decision",
     "referenceCount": 1,
     "uniqueSessionCount": 1,
+    "uniqueDayCount": 1,
     "marker": null,
     "target_section": "Key Decisions"
   }
 ]
 ```
 
-For entries that already exist in the index, look up their current `referenceCount` and `uniqueSessionCount` and carry those forward (the score script needs accurate values).
+For entries that already exist in the index, look up their current `referenceCount`, `uniqueSessionCount`, and `uniqueDayCount` and carry those forward (the score and gate scripts need accurate values).
 
 ---
 
