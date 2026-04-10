@@ -111,7 +111,7 @@ def score_index(index_path: str, check_archival_flag: bool = False) -> dict:
     """Score all entries in an index.json file."""
     path = Path(index_path)
     if not path.exists():
-        return {'error': f'Index not found: {index_path}'}
+        return {'ok': False, 'error': f'Index not found: {index_path}'}
 
     with open(path, 'r') as f:
         index = json.loads(f.read())
@@ -173,6 +173,7 @@ def score_index(index_path: str, check_archival_flag: bool = False) -> dict:
     scored.sort(key=lambda x: x['importance'], reverse=True)
 
     result = {
+        'ok': True,
         'index_path': index_path,
         'active_entries': active_count,
         'avg_importance': round(total_importance / active_count, 4) if active_count > 0 else 0,
@@ -203,7 +204,7 @@ def main():
     if args.single:
         result = compute_importance(args.ref_count, args.days, args.marker)
         result['unique_sessions'] = args.unique
-        print(json.dumps(result, indent=2))
+        print(json.dumps({'ok': True, **result}, indent=2))
         return 0
 
     if args.index:

@@ -1,6 +1,7 @@
 # Auto-Dream Cycle — Execution Prompt (v4.0)
 
 You are running an automatic memory consolidation cycle ("dream"). Execute all phases below precisely and in order.
+This file lives inside `runtime/`. Resolve the absolute path of the parent of `runtime/` and use it as `SKILL_ROOT`.
 
 **Language:** All user-facing output (dream reports, notifications, insights, suggestions) MUST use the user's preferred language from `USER.md`. Read `USER.md` first to determine the language. Do NOT default to English.
 
@@ -26,7 +27,7 @@ FOR each mode in conf.activeModes:
     IF mode == "core" AND elapsed >= 24h → add "core" to DUE_MODES
 ```
 
-If DUE_MODES is empty AND no unconsolidated logs exist → skip with recall message (see dream-prompt-lite.md Step 0-B). End session.
+If DUE_MODES is empty AND no unconsolidated logs exist → skip with recall message (see runtime/auto-dream-prompt.md Step 0-B). End session.
 
 If this is a manual trigger ("Dream now"), run all active modes regardless of elapsed time.
 

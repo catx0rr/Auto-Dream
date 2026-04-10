@@ -191,7 +191,7 @@ For first-time installation and bootstrap, read `SETUP.md`.
 
 ## Dream Cycle Flow
 
-Each dream runs in an isolated session (see `references/dream-prompt-lite.md`):
+Each dream runs in an isolated session (see `runtime/auto-dream-prompt.md`):
 
 ### Step 0: Load Config + Mode Dispatch
 Read `~/.openclaw/autodream/autodream.json`. Check `lastRun` timestamps against current time. Determine which modes are due. If no modes are due, go to Step 0-B (Skip With Recall).
@@ -371,14 +371,14 @@ CRON FIRES (4x daily: 4:30/10:30/16:30/22:30)
   scripts/dispatch.py --update   ← Python: write lastRun timestamps
 ```
 
+## Runtime Prompts
+
+- `runtime/auto-dream-prompt.md` — Recurring cron executor (compact prompt with mode dispatch)
+- `runtime/first-dream-prompt.md` — First Dream: post-install full scan (bypasses gates)
+- `runtime/dream-prompt.md` — Full prompt (for manual deep consolidation)
+
 ## Reference Files
 
-- `references/first-dream-prompt.md` — **First Dream: post-install full scan (bypasses gates)**
-- `references/dream-prompt-lite.md` — **Compact prompt for cron use with mode dispatch** (default)
-- `references/dream-prompt.md` — Full prompt (for manual deep consolidation)
 - `references/scoring.md` — Importance scoring, quality gates, forgetting curve, health score algorithms
 - `references/memory-template.md` — File templates (autodream.json, LTMEMORY.md, index.json, etc.)
 - `references/dashboard-template.html` — HTML dashboard template
-- `references/migration-cross-instance.md` — Cross-instance migration protocol
-- `references/migration-v1-to-v2.md` — v1→v2 upgrade guide
-- `references/migration-v2-to-v3.md` — v2→v3 upgrade guide

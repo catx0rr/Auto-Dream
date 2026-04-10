@@ -28,7 +28,7 @@ MODE_INTERVALS = {
 def load_config(config_path: str) -> dict:
     path = Path(config_path)
     if not path.exists():
-        print(json.dumps({'error': f'Config not found: {config_path}'}))
+        print(json.dumps({'ok': False, 'error': f'Config not found: {config_path}'}))
         sys.exit(2)
     with open(path, 'r') as f:
         return json.loads(f.read())
@@ -81,6 +81,7 @@ def get_due_modes(conf: dict) -> dict:
             })
 
     return {
+        'ok': True,
         'timestamp': now.isoformat(),
         'due_modes': due,
         'not_due': not_due,
@@ -107,6 +108,7 @@ def update_lastrun(config_path: str, modes_to_update: list):
         f.write(json.dumps(conf, indent=2, ensure_ascii=False) + '\n')
 
     return {
+        'ok': True,
         'action': 'lastRun_updated',
         'modes': modes_to_update,
         'timestamp': now,

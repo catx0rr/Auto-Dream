@@ -69,6 +69,7 @@ def scan_daily_logs(log_dir: str, days: int = 7, verbose: bool = False) -> dict:
             unconsolidated.append(entry)
 
     return {
+        'ok': True,
         'scan_time': now.isoformat(),
         'log_dir': log_dir,
         'days_scanned': days,

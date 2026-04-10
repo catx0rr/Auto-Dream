@@ -232,6 +232,7 @@ def compute_health(index_path: str, memory_path: str) -> dict:
         )
 
     return {
+        'ok': True,
         'health_score': health_score,
         'rating': rating,
         'metrics': {

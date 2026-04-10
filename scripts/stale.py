@@ -154,6 +154,7 @@ def detect_stale(memory_path: str, index_path: str, log_dir: str,
     stale.sort(key=lambda x: x['days_stale'] if isinstance(x['days_stale'], int) else 9999, reverse=True)
 
     return {
+        'ok': True,
         'threshold_days': threshold_days,
         'total_open_threads': len(threads),
         'stale_count': len(stale),

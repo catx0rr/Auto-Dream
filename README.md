@@ -122,6 +122,32 @@ Zero-dependency HTML dashboard with health gauge, metric cards, memory distribut
 
 Portable JSON bundle export/import with conflict resolution and pre-import backup.
 
+## Directory Layout
+
+```
+auto-dream/                          # Skill root (install location varies)
+├── SKILL.md                         # Runtime contract
+├── SETUP.md                         # Agent first-time setup guide
+├── README.md                        # This file
+├── LICENSE
+├── runtime/
+│   ├── auto-dream-prompt.md         # Recurring cron executor
+│   ├── first-dream-prompt.md        # One-time bootstrap (bypasses gates)
+│   └── dream-prompt.md              # Full prompt (manual deep consolidation)
+├── references/
+│   ├── scoring.md                   # Algorithm documentation
+│   ├── memory-template.md           # File/JSON templates
+│   └── dashboard-template.html      # HTML dashboard template
+├── profiles/
+│   ├── personal-assistant.md        # Personal wing taxonomy
+│   └── business-employee.md         # Business wing taxonomy
+└── scripts/
+    ├── dispatch.py, scan.py, snapshot.py, score.py
+    ├── gate.py, index.py, health.py, stale.py
+```
+
+> **Note:** The skill can be installed anywhere under the workspace skill tree. Prompts resolve their own location at runtime. No hardcoded skill path is assumed.
+
 ## Install
 
 ```bash
@@ -129,9 +155,11 @@ git clone https://github.com/catx0rr/Auto-Dream.git \
   ~/.openclaw/workspace/skills/auto-dream
 ```
 
+The exact install location may vary. Prompts resolve their own location at runtime.
+
 ## Setup
 
-Tell the agent: **"Set up Auto-Dream. Read `~/.openclaw/workspace/skills/auto-dream/SETUP.md`"**
+Tell the agent: **"Set up Auto-Dream. Read `SETUP.md` in the auto-dream skill directory."**
 
 The agent will:
 1. Ask which profile to use (`personal-assistant` or `business-employee`) — or read `AUTODREAM_PROFILE` env var for non-interactive setup

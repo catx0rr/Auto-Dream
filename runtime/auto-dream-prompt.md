@@ -2,7 +2,9 @@
 
 Read USER.md to determine user's language. All output in that language.
 Working directory: the workspace root.
-Scripts directory: `skills/auto-dream/scripts/`
+
+This file lives inside `runtime/`. Resolve the absolute path of the parent of `runtime/` and use it as `SKILL_ROOT`.
+Derive: `SCRIPTS_DIR = $SKILL_ROOT/scripts`
 
 **Hybrid rule:** Call Python scripts for all arithmetic, thresholds, date math, and counting. Use LLM judgment only for semantic understanding, deduplication, routing, insight generation, and report writing.
 
@@ -11,7 +13,7 @@ Scripts directory: `skills/auto-dream/scripts/`
 ## Step 0: Mode Dispatch [SCRIPT]
 
 ```bash
-python3 skills/auto-dream/scripts/dispatch.py --config ~/.openclaw/autodream/autodream.json
+python3 $SCRIPTS_DIR/dispatch.py --config ~/.openclaw/autodream/autodream.json
 ```
 
 Read the JSON output:
@@ -24,7 +26,7 @@ If `due_modes` is empty → go to Step 0-A.
 ## Step 0-A: Scan for Work [SCRIPT]
 
 ```bash
-python3 skills/auto-dream/scripts/scan.py --log-dir memory --days 7
+python3 $SCRIPTS_DIR/scan.py --log-dir memory --days 7
 ```
 
 Read the JSON output:
@@ -40,7 +42,7 @@ If `due_modes` is not empty → proceed to Step 0.5.
 Even when skipping, send a useful message. Scan LTMEMORY.md for Open Threads not marked [x] — find the oldest one with context. Check daily logs from 14+ days ago for matching topics.
 
 ```bash
-python3 skills/auto-dream/scripts/stale.py --memory-file LTMEMORY.md --index memory/index.json --threshold 14 --top 1
+python3 $SCRIPTS_DIR/stale.py --memory-file LTMEMORY.md --index memory/index.json --threshold 14 --top 1
 ```
 
 Use the stale result to compose the skip message:
@@ -63,7 +65,7 @@ END here. Do not proceed.
 ## Step 0.5: Snapshot BEFORE [SCRIPT]
 
 ```bash
-python3 skills/auto-dream/scripts/snapshot.py --memory-file LTMEMORY.md --save-as before
+python3 $SCRIPTS_DIR/snapshot.py --memory-file LTMEMORY.md --save-as before
 ```
 
 Note the saved path (`/tmp/autodream-snapshot-before.json`). Read the dream count from output.
@@ -109,7 +111,7 @@ For entries that already exist in the index, look up their current `referenceCou
 ### Score all candidates:
 
 ```bash
-python3 skills/auto-dream/scripts/score.py --index memory/index.json --check-archival
+python3 $SCRIPTS_DIR/score.py --index memory/index.json --check-archival
 ```
 
 Merge the importance scores into the candidates file (update each entry's `importance` field).
@@ -117,7 +119,7 @@ Merge the importance scores into the candidates file (update each entry's `impor
 ### Apply quality gates:
 
 ```bash
-python3 skills/auto-dream/scripts/gate.py \
+python3 $SCRIPTS_DIR/gate.py \
   --candidates /tmp/autodream-candidates.json \
   --config ~/.openclaw/autodream/autodream.json \
   --modes rem,deep,core
@@ -149,13 +151,13 @@ Read LTMEMORY.md, compare qualified entries:
 For each new entry:
 
 ```bash
-python3 skills/auto-dream/scripts/index.py --index memory/index.json --next-id
+python3 $SCRIPTS_DIR/index.py --index memory/index.json --next-id
 ```
 
 Use the returned ID. After writing to LTMEMORY.md, add the entry to the index:
 
 ```bash
-python3 skills/auto-dream/scripts/index.py --index memory/index.json --add /tmp/entry.json
+python3 $SCRIPTS_DIR/index.py --index memory/index.json --add /tmp/entry.json
 ```
 
 ### Update session tracking [SCRIPT]
@@ -163,7 +165,7 @@ python3 skills/auto-dream/scripts/index.py --index memory/index.json --add /tmp/
 For existing entries that were re-referenced:
 
 ```bash
-python3 skills/auto-dream/scripts/index.py --index memory/index.json --update-session mem_042 --source memory/2026-04-05.md
+python3 $SCRIPTS_DIR/index.py --index memory/index.json --update-session mem_042 --source memory/2026-04-05.md
 ```
 
 ### Write changes [LLM]
@@ -179,8 +181,8 @@ A daily log gets `<!-- consolidated -->` only when ALL extractable entries from 
 ## Step 2.5: Snapshot AFTER [SCRIPT]
 
 ```bash
-python3 skills/auto-dream/scripts/snapshot.py --memory-file LTMEMORY.md --save-as after
-python3 skills/auto-dream/scripts/snapshot.py --delta /tmp/autodream-snapshot-before.json /tmp/autodream-snapshot-after.json
+python3 $SCRIPTS_DIR/snapshot.py --memory-file LTMEMORY.md --save-as after
+python3 $SCRIPTS_DIR/snapshot.py --delta /tmp/autodream-snapshot-before.json /tmp/autodream-snapshot-after.json
 ```
 
 Read the delta output for the notification.
@@ -190,7 +192,7 @@ Read the delta output for the notification.
 ## Step 2.8: Stale Thread Detection [SCRIPT]
 
 ```bash
-python3 skills/auto-dream/scripts/stale.py --memory-file LTMEMORY.md --index memory/index.json --threshold 14 --top 3
+python3 $SCRIPTS_DIR/stale.py --memory-file LTMEMORY.md --index memory/index.json --threshold 14 --top 3
 ```
 
 Read `stale` array for the notification.
@@ -202,7 +204,7 @@ Read `stale` array for the notification.
 ### Compute health score:
 
 ```bash
-python3 skills/auto-dream/scripts/health.py --index memory/index.json --memory-file LTMEMORY.md
+python3 $SCRIPTS_DIR/health.py --index memory/index.json --memory-file LTMEMORY.md
 ```
 
 Read: `health_score`, `metrics`, `suggestions`, `reachability_detail`.
@@ -210,13 +212,13 @@ Read: `health_score`, `metrics`, `suggestions`, `reachability_detail`.
 ### Check archival candidates:
 
 ```bash
-python3 skills/auto-dream/scripts/score.py --index memory/index.json --check-archival
+python3 $SCRIPTS_DIR/score.py --index memory/index.json --check-archival
 ```
 
 For each `archival_candidates` entry, archive via:
 
 ```bash
-python3 skills/auto-dream/scripts/index.py --index memory/index.json --archive mem_015 --summary "Old API endpoint"
+python3 $SCRIPTS_DIR/index.py --index memory/index.json --archive mem_015 --summary "Old API endpoint"
 ```
 
 Also remove the full entry from LTMEMORY.md and append the one-line summary to `memory/.archive.md`.
@@ -226,7 +228,7 @@ Also remove the full entry from LTMEMORY.md and append the one-line summary to `
 Write the health and gate results to a temp file, then:
 
 ```bash
-python3 skills/auto-dream/scripts/index.py --index memory/index.json --update-stats /tmp/autodream-stats.json
+python3 $SCRIPTS_DIR/index.py --index memory/index.json --update-stats /tmp/autodream-stats.json
 ```
 
 ---
@@ -240,7 +242,7 @@ Review the health output, gate results, recent changes, and cross-layer patterns
 ## Step 3.7: Update Config [SCRIPT]
 
 ```bash
-python3 skills/auto-dream/scripts/dispatch.py --config ~/.openclaw/autodream/autodream.json --update-lastrun core,rem,deep
+python3 $SCRIPTS_DIR/dispatch.py --config ~/.openclaw/autodream/autodream.json --update-lastrun core,rem,deep
 ```
 
 (Use only the modes that actually fired.)

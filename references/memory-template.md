@@ -372,7 +372,7 @@ _Compressed entries that fell below importance threshold._
 
 ## memory/.dream-log.md
 
-Starts as an empty file. Dream reports are appended after each cycle in the format defined in `dream-prompt-lite.md`.
+Starts as an empty file. Dream reports are appended after each cycle in the format defined in `runtime/auto-dream-prompt.md`.
 
 ---
 

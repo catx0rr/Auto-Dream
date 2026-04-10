@@ -333,6 +333,7 @@ def apply_gates(candidates: list, config: dict, due_modes: list) -> dict:
         })
 
     return {
+        'ok': True,
         'modes_evaluated': ordered_modes,
         'total_candidates': len(candidates),
         'qualified_count': len(qualified),

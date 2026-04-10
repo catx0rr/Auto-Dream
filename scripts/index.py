@@ -139,6 +139,7 @@ def update_session(index: dict, entry_id: str, source_log: str) -> dict:
                 entry['uniqueDaySources'] = day_sources
 
         return {
+            'ok': True,
             'id': entry_id,
             'referenceCount': entry['referenceCount'],
             'uniqueSessionCount': entry['uniqueSessionCount'],
@@ -146,7 +147,7 @@ def update_session(index: dict, entry_id: str, source_log: str) -> dict:
             'lastReferenced': entry['lastReferenced'],
         }
 
-    return {'error': f'Entry {entry_id} not found'}
+    return {'ok': False, 'error': f'Entry {entry_id} not found'}
 
 
 def archive_entry(index: dict, entry_id: str, summary: str) -> dict:
@@ -160,12 +161,13 @@ def archive_entry(index: dict, entry_id: str, summary: str) -> dict:
             entry['summary'] = summary
 
         return {
+            'ok': True,
             'id': entry_id,
             'archived': True,
             'summary': entry.get('summary'),
         }
 
-    return {'error': f'Entry {entry_id} not found'}
+    return {'ok': False, 'error': f'Entry {entry_id} not found'}
 
 
 def update_stats(index: dict, stats_data: dict) -> dict:
@@ -214,6 +216,7 @@ def get_info(index: dict) -> dict:
     archived = [e for e in entries if e.get('archived')]
 
     return {
+        'ok': True,
         'version': index.get('version'),
         'lastDream': index.get('lastDream'),
         'total_entries': len(entries),
@@ -242,7 +245,7 @@ def main():
     do_save = False
 
     if args.next_id:
-        print(get_next_id(index))
+        print(json.dumps({'ok': True, 'next_id': get_next_id(index)}, indent=2))
         return 0
 
     if args.info:
@@ -253,7 +256,7 @@ def main():
         with open(args.add, 'r') as f:
             entry_data = json.loads(f.read())
         result = add_entry(index, entry_data)
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        print(json.dumps({'ok': True, **result}, indent=2, ensure_ascii=False))
         do_save = True
 
     if args.update_session:
@@ -272,7 +275,7 @@ def main():
         with open(args.update_stats, 'r') as f:
             stats_data = json.loads(f.read())
         result = update_stats(index, stats_data)
-        print(json.dumps(result, indent=2))
+        print(json.dumps({'ok': True, **result}, indent=2))
         do_save = True
 
     if do_save:

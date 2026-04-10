@@ -165,7 +165,7 @@ def main():
         with open(after_path, 'r') as f:
             after = json.loads(f.read())
         delta = compute_delta(before, after)
-        print(json.dumps(delta, indent=2))
+        print(json.dumps({'ok': True, **delta}, indent=2))
         return 0
 
     snapshot = take_snapshot(
@@ -182,7 +182,7 @@ def main():
             f.write(json.dumps(snapshot, indent=2))
         snapshot['_saved_to'] = save_path
 
-    print(json.dumps(snapshot, indent=2))
+    print(json.dumps({'ok': True, **snapshot}, indent=2))
     return 0
 
 

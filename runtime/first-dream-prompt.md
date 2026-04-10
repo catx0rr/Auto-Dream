@@ -3,6 +3,7 @@
 Run this ONCE immediately after installing openclaw-auto-dream.
 Read USER.md first to determine user's language. All output in that language.
 Working directory: the workspace root.
+This file lives inside `runtime/`. Resolve the absolute path of the parent of `runtime/` and use it as `SKILL_ROOT`.
 
 **GATE BYPASS:** The First Dream bypasses all quality gates (minScore, minRecallCount, minUnique). Every extracted entry is consolidated regardless of thresholds. This seeds the memory with a complete baseline that subsequent gated cycles can reference and score against.
 

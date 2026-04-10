@@ -4,7 +4,7 @@
 
 After setup is complete, DO NOT wait for the cron schedule. Immediately run the First Dream:
 
-1. Read `references/first-dream-prompt.md`
+1. Read `runtime/first-dream-prompt.md`
 2. Execute every step in the current session (not isolated — user should see it happen)
 3. First Dream bypasses quality gates — consolidates everything to bootstrap the memory
 
@@ -169,25 +169,46 @@ Ensure the following files exist (create from `references/memory-template.md` te
 
 Before creating the cron, resolve the actual installed path of the auto-dream skill so the cron payload uses an absolute path — not a hardcoded relative one.
 
-```bash
-# Resolve extraDirs base — where skills are loaded from
-extra_dirs=$(openclaw config get skills.load.extraDirs 2>/dev/null | tr -d '"[]')
+#### 4a. Try standard skill roots first
 
-# Find the auto-dream skill directory (could be skills/auto-dream or skills/cognitive/auto-dream)
-for dir in ~/.openclaw/workspace/skills/auto-dream ~/.openclaw/workspace/skills/cognitive/auto-dream; do
-  if [ -f "$dir/references/dream-prompt-lite.md" ]; then
-    autodream_skill_root="$dir"
+```bash
+for root in \
+  "$HOME/.openclaw/workspace/skills" \
+  "$HOME/.openclaw/workspace/.agents/skills" \
+  "$HOME/.agents/skills" \
+  "$HOME/.openclaw/skills"
+do
+  if [ -f "$root/auto-dream/runtime/auto-dream-prompt.md" ]; then
+    export SKILL_ROOT="$root/auto-dream"
     break
   fi
 done
+```
 
-if [ -z "$autodream_skill_root" ]; then
-  echo "ERROR: auto-dream skill not found in skills/ directory"
+#### 4b. If not found, check configured `extraDirs`
+
+```bash
+if [ -z "${SKILL_ROOT:-}" ]; then
+  for root in $(openclaw config get skills.load.extraDirs --json 2>/dev/null | python3 -c "import json,sys; [print(d) for d in json.load(sys.stdin)]" 2>/dev/null); do
+    if [ -f "$root/auto-dream/runtime/auto-dream-prompt.md" ]; then
+      export SKILL_ROOT="$root/auto-dream"
+      break
+    fi
+  done
+fi
+```
+
+#### 4c. Fail if still unresolved
+
+```bash
+if [ -z "${SKILL_ROOT:-}" ] || [ ! -f "$SKILL_ROOT/runtime/auto-dream-prompt.md" ]; then
+  echo "Could not locate auto-dream skill directory."
+  echo "Install the skill first or ensure skills.load.extraDirs includes its parent root."
   exit 1
 fi
 
-dream_prompt_path="$autodream_skill_root/references/dream-prompt-lite.md"
-echo "Auto-Dream skill root: $autodream_skill_root"
+dream_prompt_path="$SKILL_ROOT/runtime/auto-dream-prompt.md"
+echo "Using SKILL_ROOT=$SKILL_ROOT"
 echo "Dream prompt: $dream_prompt_path"
 ```
 
@@ -197,7 +218,7 @@ Verify `$dream_prompt_path` exists before proceeding.
 
 Single cron at scheduled intervals (30 4,10,16,22 * * *). Mode dispatch logic is inside the dream prompt.
 
-Use the resolved `$autodream_skill_root` to construct the absolute path in the cron message. Example for personal-assistant profile:
+Use the resolved `$SKILL_ROOT` to construct the absolute path in the cron message. Example for personal-assistant profile:
 
 ```json
 {
@@ -205,7 +226,7 @@ Use the resolved `$autodream_skill_root` to construct the absolute path in the c
   "schedule": { "kind": "cron", "expr": "30 4,10,16,22 * * *", "tz": "<timezone from autodream.json>" },
   "payload": {
     "kind": "agentTurn",
-    "message": "Run auto memory consolidation.\n\nRead <AUTODREAM_SKILL_ROOT>/references/dream-prompt-lite.md and follow every step strictly.\n\nConfig: ~/.openclaw/autodream/autodream.json\nWorking directory: the workspace root",
+    "message": "Run auto memory consolidation.\n\nRead <AUTODREAM_SKILL_ROOT>/runtime/auto-dream-prompt.md and follow every step strictly.\n\nConfig: ~/.openclaw/autodream/autodream.json\nWorking directory: the workspace root",
     "timeoutSeconds": 600
   },
   "sessionTarget": "isolated",
@@ -227,7 +248,7 @@ Replace `<AUTODREAM_SKILL_ROOT>` with the resolved absolute path (e.g. `~/.openc
 
 ### 7. Cleanup
 
-And finally cleanup the files on skills/auto-dream/:
+Cleanup files in the installed Auto-Dream skill directory:
 - [ ] .git
 - [ ] LICENSE
 - [ ] README.md
